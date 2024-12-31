@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+
+import requests
+import os
+import subprocess
+from datetime import datetime
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+
+
+def info(*args, **kwargs):
+    logging.info(*args, **kwargs)
+
+
+def error(*args, **kwargs):
+    logging.error(*args, **kwargs)
+
+
+def download_image(url, save_path):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        with open(save_path, "wb") as file:
+            file.write(response.content)
+        info(f"图片已下载到: {save_path}")
+    except requests.RequestException as e:
+        error(f"下载图片失败: {e}")
+
+
+def set_wallpaper(image_path):
+    try:
+        # 检查 wallpaper 命令是否存在
+        result = subprocess.run(["which", "wallpaper"], capture_output=True, text=True)
+        if result.returncode != 0:
+            error("未找到 wallpaper 命令，请先安装")
+            return
+            
+        subprocess.run(["wallpaper", "set", image_path], check=True)
+        info("壁纸已更新到所有桌面和显示器")
+    except subprocess.CalledProcessError as e:
+        error(f"更新壁纸失败: {e}")
+
+def main():
+    # 这里替换为您想要的图片 URL
+    image_url = "https://bing.vercel.xiaotian.dev/api/hello"
+
+    # 使用 ~/.cache 或 ~/.local/share 存储壁纸
+    save_directory = os.path.expanduser("~/.cache/wallpapers")
+    # 或者使用
+    # save_directory = os.path.expanduser("~/.local/share/wallpapers")
+    os.makedirs(save_directory, exist_ok=True)
+
+    # 使用当前日期作为文件名
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    save_path = os.path.join(save_directory, f"wallpaper_{current_date}.jpg")
+
+    if os.path.exists(save_path):
+        error(f"今日壁纸已存在: {save_path}")
+    else:
+        download_image(image_url, save_path)
+
+    if os.path.exists(save_path):
+        set_wallpaper(save_path)
+
+
+if __name__ == "__main__":
+    main()
